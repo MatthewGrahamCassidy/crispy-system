@@ -1,0 +1,22 @@
+Squid is a caching and forwarding HTTP web proxy.
+A proxy server acts as a gateway between you and the internet.
+Proxy servers act as a firewall and web filter, 
+and provide shared network connections.
+#target network
+acl lan src 172.16.144.0/24
+#website we want to block
+acl badsites dstdomain neverssl.com
+#website we want to redirect it to
+deny_info https://google.com lan
+http_reply_access deny badsites lan
+acl CONNECT method CONNECT
+
+
+/var/log/squid/access.log neccessary edits
+acl lan src 172.16.144.0/24
+acl badsites dstdomain neverssl.com
+deny_info https://google.com lan
+http_reply_access deny badsites lan
+acl CONNECT method CONNECT
+http_access allow lan
+http_port 3128

@@ -1,0 +1,251 @@
+At a terminal prompt, enter the following command to install dhcpd:
+sudo apt-get install isc-dhcp-server
+
+
+The error message the installation ends with might be a little confusing,
+but the following steps will help you configure the dhcp service:
+Most commonly, what you want to do is assign an IP address randomly. 
+This can be done with settings as follows:
+nano -w /etc/dhcp/dhcpd.conf
+
+default-lease-time 600;
+max-lease-time 7200;
+option subnet-mask 255.255.255.0;
+option broadcast-address 192.168.1.255;
+option routers 192.168.1.254;
+option domain-name-servers 192.168.1.1, 192.168.1.2;
+option domain-name "mydomain.example";
+
+subnet 192.168.1.0 netmask 255.255.255.0 {
+range 192.168.1.10 192.168.1.100;
+range 192.168.1.150 192.168.1.200;
+} 
+
+Start and stop service
+sudo service isc-dhcp-server restart
+sudo service isc-dhcp-server start
+sudo service isc-dhcp-server stop 
+
+multiple interfaces:
+nano -w /etc/network/interfaces
+
+auto lo
+iface lo inet loopback
+
+mapping hotplug
+        script grep
+        map eth1
+
+iface eth1 inet dhcp
+
+auto eth0
+iface eth0 inet static
+    address 10.152.187.1
+    netmask 255.255.255.0
+
+auto wlan0
+  iface wlan0 inet static
+    address 192.168.1.1
+    netmask 255.255.255.0
+    up     /sbin/iwconfig wlan0 mode TTTTTT && /sbin/iwconfig wlan0 enc
+restricted && /sbin/iwconfig wlan0 key [Y] XXXXXXXX && /sbin/iwconfig
+wlan0 essid SSSSSSSS
+
+auto eth1
+
+select interface card
+nano -w /etc/default/isc-dhcp-server
+INTERFACES="wlan0 eth0"
+
+Configure subnet
+nano -w /etc/dhcp3/dhcpd.conf
+
+ddns-update-style none;
+log-facility local7;
+
+subnet 192.168.1.0 netmask 255.255.255.0 {
+
+        option routers                  192.168.1.1;
+        option subnet-mask              255.255.255.0;
+        option broadcast-address        192.168.1.255;
+        option domain-name-servers      194.168.4.100;
+        option ntp-servers              192.168.1.1;
+        option netbios-name-servers     192.168.1.1;
+        option netbios-node-type 2;
+        default-lease-time 86400;
+        max-lease-time 86400;
+
+        host bla1 {
+                hardware ethernet DD:GH:DF:E5:F7:D7;
+                fixed-address 192.168.1.2;
+        }
+        host bla2 {
+                hardware ethernet 00:JJ:YU:38:AC:45;
+                fixed-address 192.168.1.20;
+        }
+}
+
+subnet  10.152.187.0 netmask 255.255.255.0 {
+
+        option routers                  10.152.187.1;
+        option subnet-mask              255.255.255.0;
+        option broadcast-address        10.152.187.255;
+        option domain-name-servers      194.168.4.100;
+        option ntp-servers              10.152.187.1;
+        option netbios-name-servers     10.152.187.1;
+        option netbios-node-type 2;
+
+        default-lease-time 86400;
+        max-lease-time 86400;
+
+        host bla3 {
+                hardware ethernet 00:KK:HD:66:55:9B;
+                fixed-address 10.152.187.2;
+        }
+}
+
+Check Route:
+ip route
+
+
+
+
+
+DORA
+
+● isc-dhcp-server.service - ISC DHCP IPv4 server
+   Loaded: loaded (/lib/systemd/system/isc-dhcp-server.service; enabled; vendor preset: enabled)
+   Active: active (running) since Mon 2019-10-07 19:24:20 UTC; 3 weeks 0 days ago
+     Docs: man:dhcpd(8)
+ Main PID: 3430 (dhcpd)
+    Tasks: 1 (limit: 1110)
+   CGroup: /system.slice/isc-dhcp-server.service
+           └─3430 dhcpd -user dhcpd -group dhcpd -f -4 -pf /run/dhcp-server/dhcpd.pid -cf /etc/dh
+
+Oct 28 23:05:23 matthewcassidy dhcpd[3430]: ns2.sysninja.com: host unknown.
+Oct 28 23:05:23 matthewcassidy dhcpd[3430]: DHCPACK on 10.0.0.2 to 00:50:56:ab:14:b6 via ens192
+Oct 28 23:09:37 matthewcassidy dhcpd[3430]: DHCPREQUEST for 10.0.0.2 from 00:50:56:ab:14:b6 via e
+Oct 28 23:09:37 matthewcassidy dhcpd[3430]: ns1.sysninja.com: host unknown.
+Oct 28 23:09:37 matthewcassidy dhcpd[3430]: ns2.sysninja.com: host unknown.
+Oct 28 23:09:37 matthewcassidy dhcpd[3430]: DHCPACK on 10.0.0.2 to 00:50:56:ab:14:b6 via ens192
+Oct 28 23:13:35 matthewcassidy dhcpd[3430]: DHCPREQUEST for 10.0.0.2 from 00:50:56:ab:14:b6 via e
+Oct 28 23:13:35 matthewcassidy dhcpd[3430]: ns1.sysninja.com: host unknown.
+Oct 28 23:13:35 matthewcassidy dhcpd[3430]: ns2.sysninja.com: host unknown.
+Oct 28 23:13:35 matthewcassidy dhcpd[3430]: DHCPACK on 10.0.0.2 to 00:50:56:ab:14:b6 via ens192
+
+/var/lib/dhcp/dhcpd.leases
+
+# The format of this file is documented in the dhcpd.leases(5) manual page.
+# This lease file was written by isc-dhcp-4.3.5
+
+# authoring-byte-order entry is generated, DO NOT DELETE
+authoring-byte-order little-endian;
+
+lease 10.0.0.1 {
+  starts 2 2019/10/08 16:41:03;
+  ends 2 2019/10/08 16:51:03;
+  tstp 2 2019/10/08 16:51:03;
+  cltt 2 2019/10/08 16:41:03;
+  binding state free;
+  hardware ethernet 00:50:56:ab:09:06;
+  uid "\377\237n\205$\000\002\000\000\253\021\020\210\\\221\227\277T\001";
+}
+lease 10.0.0.2 {
+  starts 1 2019/10/28 22:33:59;
+  ends 1 2019/10/28 22:43:59;
+  cltt 1 2019/10/28 22:33:59;
+  binding state active;
+  next binding state free;
+  rewind binding state free;
+  hardware ethernet 00:50:56:ab:14:b6;
+}
+lease 10.0.0.2 {
+  starts 1 2019/10/28 22:38:46;
+  ends 1 2019/10/28 22:48:46;
+  cltt 1 2019/10/28 22:38:46;
+  binding state active;
+  next binding state free;
+  rewind binding state free;
+  hardware ethernet 00:50:56:ab:14:b6;
+}
+lease 10.0.0.2 {
+  starts 1 2019/10/28 22:43:11;
+  ends 1 2019/10/28 22:53:11;
+  cltt 1 2019/10/28 22:43:11;
+  binding state active;
+  next binding state free;
+  rewind binding state free;
+  hardware ethernet 00:50:56:ab:14:b6;
+}
+lease 10.0.0.2 {
+  starts 1 2019/10/28 22:47:27;
+  ends 1 2019/10/28 22:57:27;
+  cltt 1 2019/10/28 22:47:27;
+  binding state active;
+  next binding state free;
+  rewind binding state free;
+  hardware ethernet 00:50:56:ab:14:b6;
+}
+lease 10.0.0.2 {
+  starts 1 2019/10/28 22:52:22;
+  ends 1 2019/10/28 23:02:22;
+  cltt 1 2019/10/28 22:52:22;
+  binding state active;
+  next binding state free;
+  rewind binding state free;
+  hardware ethernet 00:50:56:ab:14:b6;
+}
+lease 10.0.0.2 {
+  starts 1 2019/10/28 22:56:43;
+  ends 1 2019/10/28 23:06:43;
+  cltt 1 2019/10/28 22:56:43;
+  binding state active;
+  next binding state free;
+  rewind binding state free;
+  hardware ethernet 00:50:56:ab:14:b6;
+}
+lease 10.0.0.2 {
+  starts 1 2019/10/28 23:00:37;
+  ends 1 2019/10/28 23:10:37;
+  cltt 1 2019/10/28 23:00:37;
+  binding state active;
+  next binding state free;
+  rewind binding state free;
+  hardware ethernet 00:50:56:ab:14:b6;
+}
+lease 10.0.0.2 {
+  starts 1 2019/10/28 23:05:23;
+  ends 1 2019/10/28 23:15:23;
+  cltt 1 2019/10/28 23:05:23;
+  binding state active;
+  next binding state free;
+  rewind binding state free;
+  hardware ethernet 00:50:56:ab:14:b6;
+}
+lease 10.0.0.2 {
+  starts 1 2019/10/28 23:09:37;
+  ends 1 2019/10/28 23:19:37;
+  cltt 1 2019/10/28 23:09:37;
+  binding state active;
+  next binding state free;
+  rewind binding state free;
+  hardware ethernet 00:50:56:ab:14:b6;
+}
+lease 10.0.0.2 {
+  starts 1 2019/10/28 23:13:35;
+  ends 1 2019/10/28 23:23:35;
+  cltt 1 2019/10/28 23:13:35;
+  binding state active;
+  next binding state free;
+  rewind binding state free;
+  hardware ethernet 00:50:56:ab:14:b6;
+}
+lease 10.0.0.2 {
+  starts 1 2019/10/28 23:17:38;
+  ends 1 2019/10/28 23:27:38;
+  cltt 1 2019/10/28 23:17:38;
+  binding state active;
+  next binding state free;
+  rewind binding state free;
+  hardware ethernet 00:50:56:ab:14:b6;
+}

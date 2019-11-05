@@ -1,0 +1,205 @@
+Berkeley Internet Name Domain, otherwise known as BIND, is the most popular Domain Name System (DNS) 
+server in use today. It was developed in the 1980s at the University of Berkley and is currently in version 9.
+DNS is a hierarchical naming system for computers, services,or other resources connected 
+to the Internet or a private network.
+
+Configuring Bind9
+The main configuration is stored within three files:
+/etc/bind/named.conf
+/etc/bind/named.conf.options
+/etc/bind/named.conf.local
+
+The default configuration is setup to act as a caching server.
+Simply uncomment and edit the following in /etc/bind/named.conf.options:
+[...]
+
+        forwarders {
+             1.2.3.4;
+             5.6.7.8;
+        };
+
+        [...]
+(where 1.2.3.4 and 5.6.7.8 are the IP numbers of your ISP's DNS servers)
+
+now restart bind:
+sudo /etc/init.d/bind9 restart
+
+To add a DNS zone to BIND9, turning BIND9 into a Primary Master server,
+ all you have to do is edit named.conf.local:
+ [...]
+
+        zone "example.com" {
+             type master;
+             file "/etc/bind/db.example.com";
+        };
+
+        [...]
+
+Now use an existing zone file as a template:
+sudo cp /etc/bind/db.local /etc/bind/db.example.com
+
+ create an A record for ns.example.com the name server in this example:
+;
+; BIND data file for local loopback interface
+;
+$TTL    604800
+@       IN      SOA     ns.example.com. root.example.com. (
+                              1         ; Serial
+                         604800         ; Refresh
+                          86400         ; Retry
+                        2419200         ; Expire
+                         604800 )       ; Negative Cache TTL
+;
+@       IN      NS      ns.example.com.
+ns      IN      A       192.168.1.10
+
+;also list other computers
+box     IN      A       192.168.1.21
+
+Once you've made a change to the zone file BIND9 will need to be restarted for the changes to take effect:
+sudo /etc/init.d/bind9 restart
+
+Now that the zone file is setup and resolving names to IP Adresses a Reverse zone is also required.
+ A Reverse zone allows DNS to convert from an address to a name.
+Edit /etc/bind/named.conf.local and add the following:
+zone "1.168.192.in-addr.arpa" {
+        type master;
+        notify no;
+        file "/etc/bind/db.192";
+};
+
+Now create the db.192 file:
+sudo cp /etc/bind/db.127 /etc/bind/db.192
+
+Next edit /etc/bind/db.192 changing the basically the same options as in /etc/bind/db.example.com:
+;
+; BIND reverse data file for local loopback interface
+;
+$TTL    604800
+@       IN      SOA     ns.example.com. root.example.com. (
+                              2         ; Serial
+                         604800         ; Refresh
+                          86400         ; Retry
+                        2419200         ; Expire
+                         604800 )       ; Negative Cache TTL
+;
+@       IN      NS      ns.
+10      IN      PTR     ns.example.com.
+
+; also list other computers
+21      IN      PTR     box.example.com.
+
+The serial number in the reverse zone needs to be incremented on each changes as well. 
+For each A record you configure in /etc/bind/db.example.com you need to create a 
+PTR record in /etc/bind/db.192
+
+After creating the reverse zone file restart bind9:
+sudo /etc/init.d/bind9 restart
+
+Testing
+You should now be able to ping example.com on the command prompt 
+and have it resolve to the host configured above:
+ping example.com
+
+
+
+Configuration:
+/etc/bind/named.conf
+
+include "/etc/bind/named.conf.local";
+include "/etc/bind/named.conf.default-zones";// This is the primary configuration file for the B$
+//
+// Please read /usr/share/doc/bind9/README.Debian.gz for information on the
+// structure of BIND configuration files in Debian, *BEFORE* you customize
+// this configuration file.
+//
+// If you are just adding zones, please do that in /etc/bind/named.conf.local
+
+include "/etc/bind/named.conf.options";
+include "/etc/bind/named.conf.local";
+include "/etc/bind/named.conf.default-zones";
+
+/etc/bind/named.conf.options
+
+options {
+        directory "/var/cache/bind";
+
+        // If there is a firewall between you and nameservers you want
+        // to talk to, you may need to fix the firewall to allow multiple
+        // ports to talk.  See http://www.kb.cert.org/vuls/id/800113
+
+        // If your ISP provided one or more IP addresses for stable
+        // nameservers, you probably want to use them as forwarders.
+        // Uncomment the following block, and insert the addresses replacing
+        // the all-0's placeholder.
+
+         forwarders {
+        1.1.1.1;
+        8.8.8.8;
+        172.16.144.114;
+         };
+
+        //========================================================================
+        // If BIND logs error messages about the root key being expired,
+        // you will need to update your keys.  See https://www.isc.org/bind-keys
+        //========================================================================
+        dnssec-validation auto;
+
+        auth-nxdomain no;    # conform to RFC1035
+        listen-on-v6 { any; };
+};
+
+/etc/bind/named.conf.local
+
+//
+// Do any local configuration here
+//
+
+// Consider adding the 1918 zones here, if they are not used in your
+// organization
+//include "/etc/bind/zones.rfc1918";
+zone "sysninja" {
+        type master;
+        file "/etc/bind/db.*.sysninja";
+};
+
+zone file
+
+# This file is generated from information provided by
+# the datasource.  Changes to it will not persist across an instance.
+# To disable cloud-init's network configuration capabilities, write a file
+# /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg with the following:
+# network: {config: disabled}
+network:
+    ethernets:
+        ens160:
+            addresses: [172.16.144.114/24]
+            dhcp4: false
+            gateway4: 172.16.144.250
+            nameservers:
+                addresses: [8.8.8.8, 127.0.0.1]
+        ens192:
+            addresses: [10.0.0.250/24]
+            dhcp4: false
+            nameservers:
+                addresses: [8.8.8.8]
+    version: 2
+
+Bind db file
+;
+; BIND data file for local loopback interface
+;
+$TTL    604800
+@       IN      SOA     ns.sysninja root.sysninja (
+                              2         ; Serial
+                         604800         ; Refresh
+                          86400         ; Retry
+                        2419200         ; Expire
+                         604800 )       ; Negative Cache TTL
+;
+@       IN      NS      ns.sysninja
+ns      IN      A       172.16.144.114
+@       IN      AAAA    ::1
+*       IN      A       172.16.144.114
+
+
